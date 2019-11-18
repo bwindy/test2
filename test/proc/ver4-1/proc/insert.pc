@@ -1,0 +1,165 @@
+
+
+#include <stdio.h>
+#include <string.h>
+
+EXEC SQL INCLUDE SQLCA;
+#define str2var(v,s) (strcpy((char *)(v).arr, (char *)(s)), \
+						 (v).len = strlen((char *)(v).arr))
+
+void  	sql_error(char * msg);					 
+int 	insertCustomer(char *chPhone, char *chName, char *chCardNum, char *chCardInc);
+int  	deleteCustomer(char * chPhone);
+
+int main() {
+
+	char  chBuffer[1024];
+	char  chNum[5];
+
+	int i;
+
+	for( i = 1; i < 100; i++)
+	{
+		memset(chBuffer, 0x00, sizeof(chBuffer));
+		memset(chNum,    0x00, sizeof(chNum));	
+
+		char  chPhone[12] = "0103333";
+		char  chName[20]  = "HongGilDong";
+		char  chCardNum[21] = "11223344556677889900";
+		char  chCardInc[20] = "Samsung Card";	
+		
+		sprintf(chNum, "%04d", i);
+		strncat(chPhone, chNum, 4);
+		
+		deleteCustomer(chPhone);
+	//	insertCustomer(chPhone, chName, chCardNum, chCardInc);
+	}
+
+		
+    return 1;
+
+}
+
+
+int insertCustomer( char *chPhone, char *chName, char *chCardNum, char *chCardInc )
+{
+    // Start Session
+    EXEC SQL BEGIN DECLARE SECTION;
+		VARCHAR		user[20];
+		VARCHAR 	pass[20];
+		VARCHAR     vchPhone[12];
+		VARCHAR     vchName[20]; 
+		VARCHAR     vchCardNum[21]; 
+		VARCHAR     vchCardInc[20];
+	EXEC SQL END DECLARE SECTION;		
+		
+	strcpy((char*)user.arr, "ahn");
+	user.len = (short)strlen((char*)user.arr);
+	
+	strcpy((char*)pass.arr, "ahn");
+	pass.len = (short)strlen((char*)pass.arr);
+
+    // Connect Database
+    EXEC SQL WHENEVER SQLERROR GOTO error_msg;
+        
+	EXEC SQL CONNECT :user IDENTIFIED BY :pass;// using :tnsname;
+    
+ 	if( sqlca.sqlcode == 0 ) {
+			
+		printf("Connect successful\n");
+		
+	} else if( sqlca.sqlcode < 0 ) {
+			
+		printf("[ERROR] Connect Error SQL_MSG : [%d]\n", sqlca.sqlerrm.sqlerrmc);
+				
+		exit(0);
+	}	   
+
+	str2var(vchPhone,   chPhone);
+	str2var(vchName,    chName);
+	str2var(vchCardNum, chCardNum);
+	str2var(vchCardInc, chCardInc);
+	
+	// Declare the cursor. All static SQL explicit cursors 
+	EXEC SQL INSERT INTO CUSTOM VALUES( :vchPhone, :vchName, :vchCardNum, :vchCardInc);
+	
+	printf("INSERT INTO CUSTOM VALUES \(%s %s %s %s \)\n", chPhone, chName, chCardNum, chCardInc);
+
+	EXEC SQL COMMIT WORK RELEASE;
+//	exit(0);
+	
+   return 0;
+   
+error_msg:
+        printf("Connect failed\n");
+		
+        return -1;   
+
+}
+
+int  deleteCustomer(char * chPhone)
+{
+    // Start Session
+    EXEC SQL BEGIN DECLARE SECTION;
+		VARCHAR		user[20];
+		VARCHAR 	pass[20];
+		VARCHAR     vchPhone[12];
+	EXEC SQL END DECLARE SECTION;		
+		
+	strcpy((char*)user.arr, "ahn");
+	user.len = (short)strlen((char*)user.arr);
+	
+	strcpy((char*)pass.arr, "ahn");
+	pass.len = (short)strlen((char*)pass.arr);
+
+    // Connect Database
+    EXEC SQL WHENEVER SQLERROR GOTO error_msg;
+        
+	EXEC SQL CONNECT :user IDENTIFIED BY :pass;// using :tnsname;
+    
+ 	if( sqlca.sqlcode == 0 ) {
+			
+		printf("Connect successful\n");
+		
+	} else if( sqlca.sqlcode < 0 ) {
+			
+		printf("[ERROR] Connect Error SQL_MSG : [%d]\n", sqlca.sqlerrm.sqlerrmc);
+				
+		exit(0);
+	}	   
+
+	str2var(vchPhone,   chPhone);
+
+	
+	// Declare the cursor. All static SQL explicit cursors 
+	EXEC SQL DELETE FROM CUSTOM WHERE PHONE = :vchPhone;
+	
+	printf("DELETE FROM CUSTOM WHERE PHONE = %s\n", chPhone);
+
+	EXEC SQL COMMIT WORK RELEASE;
+//	exit(0);
+	
+   return 0;
+   
+error_msg:
+        printf("Connect failed\n");
+		
+        return -1;  
+}
+
+
+
+void  sql_error(char * msg)
+{
+	EXEC SQL WHENEVER SQLERROR CONTINUE;
+	
+	printf("\n ORACLE error detected !! %s\n", msg);
+	
+	EXEC SQL ROLLBACK RELEASE;
+	exit(1);
+}
+
+
+
+
+

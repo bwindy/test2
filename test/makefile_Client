@@ -1,0 +1,39 @@
+# Makefile for func
+
+
+LIB_DIR = \
+	-L/usr/lib
+
+
+CC = gcc
+CPP = g++
+
+CFLAGS = $(INC_DIR) -I. -g3
+
+LFLAGS = $(LIB_DIR) -lnsl -lpthread -lrt
+
+OBJS = client.o
+
+
+TARGET = Client
+
+
+all: $(TARGET)
+
+full: clean all
+
+clean:
+	-rm -f *.o
+
+$(TARGET): $(OBJS)
+	rm -f ./$(TARGET)
+	$(CC) -o ./$(TARGET) $(OBJS) $(LFLAGS)
+
+
+
+.SUFFIXES:  .cpp .c
+.cpp.o:
+	$(CC) -c $< -o $@ $(CFLAGS)
+
+.c.o:
+	$(CC) -c $< -o $@ $(CFLAGS)

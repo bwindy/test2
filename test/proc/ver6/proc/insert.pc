@@ -1,0 +1,370 @@
+
+
+#include <stdio.h>
+#include <string.h>
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/wait.h>
+
+#include "community.h"
+
+#define MYPORT 4950    /* the port users will be connecting to */
+
+#define MAXBUFLEN 1024
+
+int  CheckRecv( int sock, char *sBuffer, int nRecvSize, int nFlag);
+
+
+EXEC SQL INCLUDE SQLCA;
+#define str2var(v,s) (strcpy((char *)(v).arr, (char *)(s)), \
+						 (v).len = strlen((char *)(v).arr))
+
+void  	sql_error(char * msg);					 
+int 	insertCustomer(char *chPhone, char *chName, char *chCardNum, char *chCardInc);
+int  	deleteCustomer(char * chPhone);
+
+int main() {
+
+	char  chBuffer[1024];
+	char  chNum[5];
+
+	int i;
+
+
+
+		
+    return 1;
+
+}
+
+
+
+int main()
+{
+	int serSockfd, cliSockfd;
+	struct sockaddr_in my_addr;    /* my address information */
+	struct sockaddr_in clientaddr; /* connector's address information */
+	struct linger li;
+	int 	addrLen;
+	int 	state, rxlen, txlen, seqNum;
+	char 	rcvbuf[MAXBUFLEN], sndbuf[MAXBUFLEN];
+	char  	chPhone[12];
+	char  	chName[20]";
+	char  	chCardNum[21];
+	char  	chCardInc[20];		
+	
+	char *pIP, *pSndbuf;
+
+	COMMUNITY_T cm;
+	COMMUNITY_T *pCm;
+
+	addrLen = sizeof(clientaddr);
+	seqNum = 0;
+
+	if ((serSockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+		perror("socket");
+		exit(1);
+	}
+
+	my_addr.sin_family = AF_INET;         /* host byte order */
+	my_addr.sin_port = htons(MYPORT);     /* short, network byte order */
+	my_addr.sin_addr.s_addr = INADDR_ANY; /* auto-fill with my IP */
+	//my_addr.sin_addr.s_addr = inet_addr("211.55.81.90"); /* auto-fill with my IP */
+	bzero(&(my_addr.sin_zero), 8);        /* zero the rest of the struct */
+	
+	/* set linger */
+	li.l_onoff = 1;
+	li.l_linger = 0;
+	if (setsockopt(serSockfd, SOL_SOCKET, SO_LINGER, (char *)&li, sizeof(struct linger)) < 0)
+	{
+		perror("setsockopt");
+		exit(0);
+	}
+	
+	if (bind(serSockfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr))  == -1) {
+		perror("bind");
+		exit(0);
+	}
+
+	state = listen(serSockfd, 5);
+    if (state == -1)
+    {
+        perror("listen error : ");
+        exit(0);
+    }
+	
+	
+   FILE  *pLog = fopen ("z.log", "a");		
+   
+   
+   
+	int i = 0;
+	
+    while(1)
+    {
+		
+        cliSockfd = accept(serSockfd, (struct sockaddr *)&clientaddr, &addrLen);
+        if (cliSockfd == -1)
+        {
+            perror("Accept error : ");
+            exit(0);
+        }
+
+		pIP = inet_ntoa(clientaddr.sin_addr);
+
+		while(1)
+        {
+			memset( rcvbuf,    0x00, sizeof(rcvbuf));
+			memset( chPhone,   0x00, sizeof(chPhone));
+			memset( chName,    0x00, sizeof(chName));
+			memset( chCardNum, 0x00, sizeof(chCardNum));
+			memset( chCardInc, 0x00, sizeof(chCardInc));
+
+			rxlen = CheckRecv( cliSockfd, rcvbuf, 2, 0);			
+			
+//			rxlen = Recv(cliSockfd, 100, 73, rcvbuf);
+		
+			if( rxlen <= 0 ) {
+	
+				if (pLog) {
+					printf("$$$$    %s\n", rcvbuf);
+				//	fprintf (pLog, "FILE buffer %s\n", rcvbuf);
+				} /* endif */
+				
+				printf("=== [%s]\n", rcvbuf );
+
+				if( i > 10) {
+            //    continue;				
+					shutdown(cliSockfd, 2);
+					close(cliSockfd);
+					break;	
+				}
+				
+				i++;
+				
+			} else if( rxlen > 0 ) {
+				
+				if (pLog) {
+					printf("$$$$    %s\n", rcvbuf);
+					
+					memcpy( chPhone , cvbuf, sizeof(chPhone));
+					nSize = nSize + sizeof(chPhone);
+					memcpy(  chName, cvbuf, sizeof(chName));
+					nSize = nSize + sizeof(chName);
+					memcpy(  chCardNum, cvbuf, sizeof(chCardNum));
+					nSize = nSize + sizeof(chCardNum);
+					memcpy(  chCardInc, cvbuf, sizeof(chCardInc));
+					
+					insertCustomer(chPhone, chName, chCardNum, chCardInc);					
+					
+					fprintf (pLog, "%s\n", rcvbuf);
+				} /* endif */			
+				
+			    i = 0;
+			} 
+			
+
+        }
+
+		shutdown(cliSockfd, 2);
+		close(cliSockfd);
+    }
+
+	shutdown(cliSockfd, 2);
+	close(serSockfd);
+	
+	
+	fclose (pLog);
+	
+	return 0;
+}
+
+create table  customer (
+handphone  varchar(11),
+name       varcahr(20),
+cardnumber varchar(20),
+cardinc    varchar(20)
+);
+
+int insertCustomer( char *chPhone, char *chName, char *chCardNum, char *chCardInc )
+{
+    // Start Session
+    EXEC SQL BEGIN DECLARE SECTION;
+		VARCHAR		user[20];
+		VARCHAR 	pass[20];
+		VARCHAR     vchPhone[12];
+		VARCHAR     vchName[20]; 
+		VARCHAR     vchCardNum[21]; 
+		VARCHAR     vchCardInc[20];
+	EXEC SQL END DECLARE SECTION;		
+		
+	strcpy((char*)user.arr, "ahn");
+	user.len = (short)strlen((char*)user.arr);
+	
+	strcpy((char*)pass.arr, "ahn");
+	pass.len = (short)strlen((char*)pass.arr);
+
+    // Connect Database
+    EXEC SQL WHENEVER SQLERROR GOTO error_msg;
+        
+	EXEC SQL CONNECT :user IDENTIFIED BY :pass;// using :tnsname;
+    
+ 	if( sqlca.sqlcode == 0 ) {
+			
+		printf("Connect successful\n");
+		
+	} else if( sqlca.sqlcode < 0 ) {
+			
+		printf("[ERROR] Connect Error SQL_MSG : [%d]\n", sqlca.sqlerrm.sqlerrmc);
+				
+		exit(0);
+	}	   
+
+	str2var(vchPhone,   chPhone);
+	str2var(vchName,    chName);
+	str2var(vchCardNum, chCardNum);
+	str2var(vchCardInc, chCardInc);
+	
+	// Declare the cursor. All static SQL explicit cursors 
+	EXEC SQL INSERT INTO CUSTOM VALUES( :vchPhone, :vchName, :vchCardNum, :vchCardInc);
+	
+	printf("INSERT INTO CUSTOM VALUES \(%s %s %s %s \)\n", chPhone, chName, chCardNum, chCardInc);
+
+	EXEC SQL COMMIT WORK RELEASE;
+//	exit(0);
+	
+   return 0;
+   
+error_msg:
+        printf("Connect failed\n");
+		
+        return -1;   
+
+}
+
+int  deleteCustomer(char * chPhone)
+{
+    // Start Session
+    EXEC SQL BEGIN DECLARE SECTION;
+		VARCHAR		user[20];
+		VARCHAR 	pass[20];
+		VARCHAR     vchPhone[12];
+	EXEC SQL END DECLARE SECTION;		
+		
+	strcpy((char*)user.arr, "ahn");
+	user.len = (short)strlen((char*)user.arr);
+	
+	strcpy((char*)pass.arr, "ahn");
+	pass.len = (short)strlen((char*)pass.arr);
+
+    // Connect Database
+    EXEC SQL WHENEVER SQLERROR GOTO error_msg;
+        
+	EXEC SQL CONNECT :user IDENTIFIED BY :pass;// using :tnsname;
+    
+ 	if( sqlca.sqlcode == 0 ) {
+			
+		printf("Connect successful\n");
+		
+	} else if( sqlca.sqlcode < 0 ) {
+			
+		printf("[ERROR] Connect Error SQL_MSG : [%d]\n", sqlca.sqlerrm.sqlerrmc);
+				
+		exit(0);
+	}	   
+
+	str2var(vchPhone,   chPhone);
+
+	
+	// Declare the cursor. All static SQL explicit cursors 
+	EXEC SQL DELETE FROM CUSTOM WHERE PHONE = :vchPhone;
+	
+	printf("DELETE FROM CUSTOM WHERE PHONE = %s\n", chPhone);
+
+	EXEC SQL COMMIT WORK RELEASE;
+//	exit(0);
+	
+   return 0;
+   
+error_msg:
+        printf("Connect failed\n");
+		
+        return -1;  
+}
+
+
+
+void  sql_error(char * msg)
+{
+	EXEC SQL WHENEVER SQLERROR CONTINUE;
+	
+	printf("\n ORACLE error detected !! %s\n", msg);
+	
+	EXEC SQL ROLLBACK RELEASE;
+	exit(1);
+}
+
+int  CheckRecv( int sock, char *sBuffer, int nRecvSize, int nFlag)
+{
+	int nCheck = 0;
+
+	for( ; ; )
+	{
+		if( nFlag != 2) {
+			memset( sBuffer, 0x00, sizeof(sBuffer));	// add
+			nCheck = recv(sock, sBuffer, nRecvSize, 0); 
+				
+			if( nCheck > 0) {
+				nFlag = 1;
+			}
+				
+			if( nCheck <= 0 )
+			{
+				close(sock);  // Client end
+				break;
+			}
+				
+			nRecvSize = atoi(sBuffer);
+		
+		}
+			
+		if( nFlag != 2) {
+			
+				
+			memset( sBuffer, 0x00, sizeof(sBuffer));	// add 		
+			nCheck = recv(sock, sBuffer, nRecvSize, 0);
+
+				
+			if( nCheck > 0) {
+				nFlag = 2;
+			}
+				
+			if( nCheck <= 0 )
+			{
+				close(sock);  // Client end
+				break;
+			}				
+		}
+
+		if( nFlag == 2) {
+			break;
+		}		
+	}
+	
+	return nCheck;
+}
+
+
+
+
+

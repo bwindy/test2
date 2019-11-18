@@ -1,0 +1,201 @@
+
+
+/********************
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include <sqlca.h>
+
+
+EXEC SQL INCLUDE ORACA;
+
+
+	
+EXEC SQL BEGIN DECLARE SECTION;
+	VARCHAR		username[20];
+	VARCHAR 	password[20];
+		
+	VARCHAR     strA[11];
+	VARCHAR     strB[11];
+EXEC SQL END   DECLARE SECTION;
+	
+	
+int  sample_select();
+void  sql_error(char * msg);
+
+int  main(int argc, char *argv[])
+{
+
+    int  nReturn = sample_select();	
+	
+	return nReturn;
+}
+
+int  sample_select()
+{
+	strcpy((char*)username.arr, "ahn");
+	username.len = (short)strlen((char*)username.arr);
+	
+	strcpy((char*)password.arr, "ahn");
+	password.len = (short)strlen((char*)password.arr);
+
+  
+	EXEC SQL WHENEVER SQLERROR DO sql_error("ORACLE errro--");
+	
+	EXEC SQL CONNECT :username IDENTIFIED BY :password;	
+
+	if( sqlca.sqlcode != 0)
+	{
+		printf("[ERROR] Connect Error SQL_MSG : [%d]\n", sqlca.sqlerrm.sqlerrmc);
+		exit(0);
+	}
+
+
+	// Declare the cursor. All static SQL explicit cursors 
+	EXEC SQL DECLARE  salespeople  CURSOR FOR
+		SELECT A, B
+		FROM	TEST;
+		
+	// Open the cursor 
+	EXEC SQL OPEN salespeople;
+	
+	// Get ready to print result 
+	printf("Test Table Commission\n");
+	printf("------------   -------------");
+	
+	char  chA[20], chB[20];
+	
+	for(;;)
+	{
+		memset(chA, 0x00, 20);
+		memset(chB, 0x00, 20);
+		
+		EXEC SQL FETCH salespeople INTO :strA, :strB;
+		
+		if( sqlca.sqlcode > 0 ) {
+			strncpy( chA, (char*)strA.arr, strA.len);
+			strncpy( chB, (char*)strB.arr, strB.len);
+			
+			printf(" A = [%s] B = [%s] \n", chA, chB);
+		} else if( sqlca.sqlcode < 0 ) {
+			printf(" ORACLE ERROR NUMBER [%d] \n", sqlca.sqlcode );
+			
+			exit(0);
+		}
+	}
+	
+	// Close the cursor 
+	EXEC SQL CLOSE salespeople;
+	
+	EXEC SQL COMMIT WORK RELEASE;
+	
+	exit(0);
+
+	return 1;
+	
+}
+	
+void  sql_error(char * msg)
+{
+	EXEC SQL WHENEVER SQLERROR CONTINUE;
+	
+	printf("\n ORACLE error detected !! %s\n", msg);
+	
+	EXEC SQL ROLLBACK RELEASE;
+	exit(1);
+}
+
+**/
+
+/*********************************************************************/
+
+
+#include <stdio.h>
+#include <string.h>
+
+EXEC SQL INCLUDE SQLCA;
+
+int main() {
+
+        // Start Session
+        EXEC SQL BEGIN DECLARE SECTION;
+
+        VARCHAR user[20],pass[20],tnsname[20];
+	    VARCHAR     strA[11];
+	    VARCHAR     strB[11];	
+        int  id;
+        int i=0;
+        const char* uid = "ahn";
+        const char* pwd = "ahn";
+        const char* tns = "orcl";
+
+
+        EXEC SQL END DECLARE SECTION;
+
+        // change the username here
+        strcpy((char*)user.arr, uid);
+        user.len=(unsigned short)strlen((char *)user.arr);
+
+        // change the password here
+        strcpy((char*)pass.arr, pwd);
+        pass.len=(unsigned short)strlen((char *)pass.arr);
+
+        // change the tnsname entry here
+        strcpy((char*)tnsname.arr, tns);
+        tnsname.len=(unsigned short)strlen((char *)tnsname.arr);
+
+        // Connect Database
+     //   EXEC SQL WHENEVER SQLERROR GOTO error_msg;
+        EXEC SQL CONNECT :user IDENTIFIED BY :pass;// using :tnsname;
+        printf("Connect successful\n");
+
+
+        EXEC SQL declare emp_cursor cursor for select a, b from test;
+        EXEC SQL open emp_cursor;
+        EXEC SQL WHENEVER NOT FOUND DO break;
+		
+		char  chA[20], chB[20];
+
+        while(1)
+        {
+			memset(chA, 0x00, 20);
+			memset(chB, 0x00, 20);
+            
+			EXEC SQL fetch emp_cursor into :strA, :strB;
+		
+			if( sqlca.sqlcode == 0 ) {
+			
+				strncpy( chA, (char*)strA.arr, strA.len);
+				strncpy( chB, (char*)strB.arr, strB.len);
+				
+				printf("Table Test data \n");
+		        printf("-------- ----------\n");
+				printf(" A = [%s] B = [%s] \n", chA, chB);
+			} else if( sqlca.sqlcode < 0 ) {
+			
+				printf(" ORACLE ERROR NUMBER [%d] \n", sqlca.sqlcode );
+				
+				exit(0);
+			}		
+
+        }
+        EXEC SQL close emp_cursor;
+
+        EXEC SQL commit work release;
+
+        return 0;
+
+		/*
+error_msg:
+        printf("Connect failed\n");
+		
+        return -1;
+*/
+}
+
+/*********************************************************************/
+
+
+
